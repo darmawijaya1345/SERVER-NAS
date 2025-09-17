@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NAS SERVER - Dashboard (tanpa grafik)</title>
+  <style>
+    :root{
+      --bg:#000;
+      --card:#0f1512;
+      --accent:#00ff88;
+      --muted:#6b6b6b;
+      --danger:#ff4444;
+    }
+    html,body{height:100%;margin:0;font-family: "Courier New", monospace;background:var(--bg);color:var(--accent);}
+
+    /* login background image */
+    .login-bg {
+      min-height:100vh;
+      background: url("images/8b29f554-15e6-442d-aebe-3acc0ac2592c.png") no-repeat center center fixed;
+      background-size: cover;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:auto;
+    }
+    .login-bg::after{
+      content:"";
+      position:absolute;left:0;top:0;right:0;bottom:0;
+      background: rgba(0,0,0,0.6);
+      pointer-events:none;
+    }
+
+    .login-box{
+      position:relative;
+      z-index:2;
+      width:360px;
+      padding:22px;
+      border-radius:10px;
+      background: linear-gradient(180deg, rgba(15,20,18,0.95), rgba(8,10,8,0.85));
+      border:1px solid rgba(0,255,136,0.12);
+      box-shadow: 0 0 30px rgba(0,255,136,0.06);
+      text-align:center;
+    }
+    .login-box h2{margin:0 0 14px;color:var(--accent);text-shadow:0 0 8px rgba(0,255,136,0.12)}
+    .login-box input{
+      width:92%;
+      padding:10px;
+      margin:8px 0;
+      border-radius:6px;
+      border:1px solid rgba(0,255,136,0.12);
+      background:#07100a;
+      color:var(--accent);
+      outline:none;
+      font-size:14px;
+    }
+    .btn {
+      display:inline-block;
+      padding:10px 16px;
+      margin-top:8px;
+      border-radius:6px;
+      border:none;
+      cursor:pointer;
+      font-weight:bold;
+      background:var(--accent);
+      color:#000;
+      box-shadow: 0 0 10px rgba(0,255,136,0.08);
+    }
+    .btn.danger { background:var(--danger); color:#fff; box-shadow:0 0 12px rgba(255,68,68,0.12) }
+    .small { font-size:13px; color:var(--muted) }
+
+    /* Dashboard */
+    .dashboard {
+      display:none;
+      min-height:100vh;
+      background: linear-gradient(180deg,#000,#07110b 60%);
+      padding:18px 24px;
+      box-sizing:border-box;
+    }
+    .top {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+    .title {
+      font-size:20px;
+      color:var(--accent);
+      letter-spacing:0.6px;
+    }
+    .logout {
+      background:var(--danger);
+      color:white;
+      border:0;
+      padding:8px 12px;
+      border-radius:6px;
+      cursor:pointer;
+      font-weight:bold;
+    }
+    .grid {
+      display:grid;
+      grid-template-columns: 1fr 380px;
+      gap:18px;
+      margin-top:18px;
+      align-items:start;
+    }
+    .card {
+      background:var(--card);
+      border:1px solid rgba(0,255,136,0.06);
+      border-radius:8px;
+      padding:14px;
+      box-shadow: 0 0 18px rgba(0,0,0,0.6);
+    }
+    .card h3 { margin:0 0 8px; color:#aaffc9; }
+
+    .folders ul { padding:0; margin:0; list-style:none; }
+    .folders li {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:6px;
+      margin-bottom:8px;
+      background: linear-gradient(90deg, rgba(0,0,0,0.05), rgba(255,255,255,0.01));
+      cursor:pointer;
+      transition: transform .08s;
+    }
+    .folders li:hover { transform:translateY(-2px); box-shadow: 0 4px 18px rgba(0,255,136,0.03); }
+    .folders .meta { color:var(--muted); font-size:13px; }
+
+    pre.sys {
+      white-space:pre-wrap;
+      word-break:break-word;
+      margin:8px 0 0;
+      color:#bfffd6;
+      font-size:13px;
+      background: rgba(0,0,0,0.15);
+      padding:10px;
+      border-radius:6px;
+      border:1px dashed rgba(0,255,136,0.06);
+    }
+
+    .speed-area { text-align:center; }
+    .speed-area p{ margin:10px 0; color:#c9ffc9; font-weight:bold }
+
+    .folder-view { display:none; }
+    .folder-view h4 { margin:0 0 8px; color:#fff; }
+    .back-btn { margin-top:12px; background:transparent;border:1px solid rgba(255,255,255,0.06); color:var(--accent); padding:8px 10px;border-radius:6px; cursor:pointer; }
+
+    footer { margin-top:18px; color:var(--muted); font-size:13px; text-align:center; }
+    @media(max-width:900px){
+      .grid{ grid-template-columns: 1fr; }
+      .login-box{ width:92%; margin:60px auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div class="login-bg" id="loginScreen">
+    <div class="login-box" role="form" aria-label="Login Form">
+      <h2>NAS SERVER - Login</h2>
+      <input id="username" type="text" placeholder="Username" autocomplete="off" />
+      <input id="password" type="password" placeholder="Password" autocomplete="off" />
+      <div>
+        <button class="btn" onclick="doLogin()">Login</button>
+      </div>
+      <div style="margin-top:10px" class="small">Username: <strong>root</strong> • Password: <strong>123</strong></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard" id="dashboard">
+    <div class="top">
+      <div class="title">💾 NAS SERVER • Penyimpanan Drive</div>
+      <div>
+        <button class="logout" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT -->
+      <div>
+        <div class="card folders">
+          <h3>🗂️ Folder Penyimpanan</h3>
+          <ul id="folderList">
+            <li onclick="openFolderPrompt('Dokumen')">
+              <span>🗂️ Dokumen</span>
+              <span class="meta">350 items • 🔐 Key: input 1</span>
+            </li>
+            <li onclick="openFolderPrompt('Gambar')">
+              <span>🗂️ Gambar</span>
+              <span class="meta">150 items • 🔐 Key: input 2</span>
+            </li>
+            <li onclick="openFolderPrompt('Backup')">
+              <span>🗂️ Backup</span>
+              <span class="meta">500 items • 🔐 Key: input 3</span>
+            </li>
+          </ul>
+
+          <div id="folderView" class="folder-view" style="margin-top:12px;">
+            <h4 id="openedFolderTitle">Folder</h4>
+            <div id="openedFolderContent" style="color:var(--muted);font-size:13px"></div>
+            <button class="back-btn" onclick="closeFolderView()">Kembali ke Dashboard</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>📶 Tes Kecepatan Internet</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="startSpeedTest()">Start Test</button>
+            <button class="btn danger" onclick="stopSpeedTest()">Stop Test</button>
+          </div>
+          <div class="speed-area">
+            <p id="speedResult">Tes belum dimulai.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div>
+        <div class="card">
+          <h3>💻 Informasi Sistem</h3>
+          <pre id="systemInfo" class="sys">Memuat informasi sistem...</pre>
+          <div style="margin-top:10px">
+            <button class="btn" onclick="loadSystemInfo()">Refresh Info</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>⚙️ Statistik (Simulasi)</h3>
+          <p>CPU: <span id="cpuSim">0%</span></p>
+          <p>Memory: <span id="memSim">0%</span></p>
+          <p>Temperatur: <span id="tempSim">--°C</span></p>
+          <p>RX/TX: <span id="netSim">-- / -- KB</span></p>
+          <div style="margin-top:10px" class="small">Nilai ini disimulasikan; untuk data nyata pakai backend ya bro.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>copyright by: ajikoman</footer>
+  </div>
+
+  <script>
+    /* ===== AUTH ===== */
+    function doLogin(){
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      if(!u || !p){
+        alert("Username & password anda diisi dulu !!");
+        return;
+      }
+      if(u !== 'root' && p !== '123'){
+        alert("Username dan Password salah !!");
+        return;
+      }
+      if(u !== 'root'){
+        alert("Username salah, silahkan diisi dengan benar !!");
+        return;
+      }
+      if(p !== '123'){
+        alert("Password salah, silahkan diisi dengan benar !!");
+        return;
+      }
+
+      // success
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadSystemInfo();
+      startSimulatedStats();
+    }
+
+    function doLogout(){
+      stopSimulatedStats();
+      stopSpeedTest();
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('username').value='';
+      document.getElementById('password').value='';
+      document.getElementById('systemInfo').textContent = 'Memuat informasi sistem...';
+      document.getElementById('speedResult').textContent = 'Tes belum dimulai.';
+    }
+
+    /* ===== FOLDER ACCESS ===== */
+    function openFolderPrompt(folderName){
+      const key = prompt(`Masukkan password key untuk membuka folder "${folderName}":`);
+      if(key === null) return;
+      if(key === '123' || key === '1234'){
+        openFolderView(folderName);
+      } else {
+        alert('❌ Password key salah! Tidak bisa membuka folder.');
+      }
+    }
+
+    function openFolderView(folderName){
+      const sample = {
+        'Dokumen': ['laporan-2024.pdf','invoice-09.xlsx','note.txt'],
+        'Gambar': ['holiday1.jpg','diagram.png','logo.svg'],
+        'Backup': ['backup-2025-01.tar.gz','db-dump.sql']
+      };
+      const files = sample[folderName] || ['(folder kosong)'];
+      document.getElementById('openedFolderTitle').textContent = `Folder: ${folderName}`;
+      document.getElementById('openedFolderContent').innerHTML = '<ul style="margin:6px 0 0;padding-left:16px;color:var(--muted)">' +
+        files.map(f=> `<li>${f}</li>`).join('') + '</ul>';
+      document.getElementById('folderView').style.display = 'block';
+      document.getElementById('folderView').scrollIntoView({behavior:'smooth'});
+    }
+
+    function closeFolderView(){
+      document.getElementById('folderView').style.display = 'none';
+    }
+
+    /* ===== SYSTEM INFO ===== */
+    function loadSystemInfo() {
+      const now = new Date();
+      const info = `
+Tanggal/Waktu:       ${now.toLocaleString()}
+Platform:            ${navigator.platform}
+User Agent:          ${navigator.userAgent}
+Resolusi Layar:      ${screen.width} x ${screen.height}
+Bahasa Browser:      ${navigator.language}
+      `;
+      document.getElementById("systemInfo").textContent = info;
+    }
+
+    /* ===== SPEED TEST (image method) ===== */
+    let testImage = null;
+    let testStart = 0;
+    let testRunning = false;
+
+    function startSpeedTest() {
+      if (testRunning) return;
+      testRunning = true;
+      document.getElementById("speedResult").textContent = "🚀 Menguji kecepatan...";
+
+      testStart = new Date().getTime();
+      testImage = new Image();
+      const cacheBuster = Math.random();
+
+      testImage.onload = function () {
+        if (!testRunning) return;
+        const duration = (new Date().getTime() - testStart) / 1000;
+        const fileSizeBits = 1000000 * 8;
+        const speedBps = fileSizeBits / duration;
+        const speedMbps = (speedBps / (1024 * 1024)).toFixed(2);
+        const uploadMbps = (speedMbps / 2).toFixed(2);
+
+        document.getElementById("speedResult").textContent =
+          `✅ Download: ${speedMbps} Mbps\n📤 Upload (estimasi): ${uploadMbps} Mbps\n⏱️ Durasi: ${duration.toFixed(2)} detik`;
+        testRunning = false;
+      };
+
+      testImage.onerror = function () {
+        if (testRunning) {
+          document.getElementById("speedResult").textContent = "❌ Gagal melakukan tes kecepatan.";
+          testRunning = false;
+        }
+      };
+
+      testImage.src = "https://upload.wikimedia.org/wikipedia/commons/3/3f/Fronalpstock_big.jpg?cache=" + cacheBuster;
+    }
+
+    function stopSpeedTest() {
+      testRunning = false;
+      if (testImage) {
+        testImage.src = "";
+        testImage = null;
+      }
+      document.getElementById("speedResult").textContent = "⛔ Tes dihentikan.";
+    }
+
+    /* ===== Simulated stats ===== */
+    let simInterval = null;
+    function startSimulatedStats(){
+      if(simInterval) return;
+      simInterval = setInterval(()=> {
+        const cpu = (Math.random()*100).toFixed(1);
+        const mem = (Math.random()*100).toFixed(1);
+        const temp = (30 + Math.random()*20).toFixed(1);
+        const rx = Math.floor(Math.random()*1000);
+        const tx = Math.floor(Math.random()*1000);
+
+        document.getElementById('cpuSim').innerText = cpu + '%';
+        document.getElementById('memSim').innerText = mem + '%';
+        document.getElementById('tempSim').innerText = temp + '°C';
+        document.getElementById('netSim').innerText = rx + ' KB / ' + tx + ' KB';
+      }, 2000);
+    }
+
+    function stopSimulatedStats(){
+      if(simInterval) clearInterval(simInterval);
+      simInterval = null;
+      document.getElementById('cpuSim').innerText='0%';
+      document.getElementById('memSim').innerText='0%';
+      document.getElementById('tempSim').innerText='--°C';
+      document.getElementById('netSim').innerText='-- / -- KB';
+    }
+
+  </script>
+</body>
+</html>
